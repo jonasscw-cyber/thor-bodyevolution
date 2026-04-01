@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Body Evolution — Assistente Virtual</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --border: #2a2a2a;
+    --accent: #e8000a;
+    --accent2: #b00008;
+    --text: #ffffff;
+    --muted: #888;
+    --user-bubble: #3a0005;
+    --bot-bubble: #1c1c1c;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e8000a, #8a0005);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; color: #000;
+    flex-shrink: 0;
+  }
+  .header-info h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 1px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .header-info p {
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #4caf50;
+    display: inline-block; margin-right: 5px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:.4; }
+  }
+
+  /* ── Messages ── */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    animation: fadeUp .25s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(8px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+  .bubble-wrap.user { align-self: flex-end; align-items: flex-end; }
+  .bubble-wrap.bot  { align-self: flex-start; align-items: flex-start; }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .bubble-wrap.user .bubble {
+    background: var(--user-bubble);
+    border: 1px solid #aa0008;
+    border-bottom-right-radius: 5px;
+    color: #ffcccc;
+  }
+  .bubble-wrap.bot .bubble {
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 5px;
+  }
+  .bubble-time {
+    font-size: 11px; color: var(--muted);
+    margin-top: 4px; padding: 0 4px;
+  }
+
+  /* Typing indicator */
+  .typing .bubble {
+    padding: 14px 18px;
+  }
+  .typing-dots { display: flex; gap: 5px; align-items: center; }
+  .typing-dots span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: .2s; }
+  .typing-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+  }
+
+  /* Quick replies */
+  .quick-replies {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 0 16px 8px;
+    flex-shrink: 0;
+  }
+  .qr-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+  .qr-btn:hover { background: var(--accent); color: #000; }
+
+  /* ── Input ── */
+  .input-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 12px 16px 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #userInput {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 11px 18px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14.5px;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    overflow-y: auto;
+    line-height: 1.5;
+    transition: border-color .2s;
+  }
+  #userInput:focus { border-color: var(--accent); }
+  #userInput::placeholder { color: var(--muted); }
+
+  #sendBtn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform .15s, background .15s;
+  }
+  #sendBtn:hover { transform: scale(1.08); background: #b00008; }
+  #sendBtn:disabled { background: var(--border); cursor: not-allowed; transform: none; }
+  #sendBtn svg { width: 20px; height: 20px; }
+
+  /* CTA WhatsApp */
+  .wpp-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #25D366; color: #fff;
+    padding: 10px 18px; border-radius: 24px;
+    font-weight: 600; font-size: 14px;
+    text-decoration: none; margin-top: 10px;
+    transition: opacity .15s;
+  }
+  .wpp-cta:hover { opacity: .9; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="avatar">BE</div>
+    <div class="header-info">
+      <h1>Body Evolution Academia</h1>
+      <p><span class="status-dot"></span>Thor • Assistente Virtual • Online agora</p>
+    </div>
+  </header>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="quick-replies" id="quickReplies"></div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="Digite sua mensagem..." rows="1"></textarea>
+    <button id="sendBtn" aria-label="Enviar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+
+</div>
+
+<script>
+const SYSTEM_PROMPT = `Você é Thor, o assistente virtual de vendas da Body Evolution, uma academia localizada no Brasil. Seu objetivo é acolher o visitante, tirar dúvidas, apresentar planos e ajudar a fechar a matrícula ou agendar uma visita.
+
+Informações da academia:
+
+SERVIÇOS E PLANOS:
+- Musculação:
+  • Mensal: R$145,00
+  • Trimestral: R$375,00 (até 3x sem juros no cartão)
+  • Semestral: R$714,00 (até 6x sem juros no cartão)
+  • Anual: R$1.198,80 (até 12x sem juros no cartão)
+  • Plano 18 meses: R$1.618,20 (até 12x sem juros no cartão)
+
+- Jiu Jitsu adulto (turma mista): R$150,00/mês
+- Jiu Jitsu adulto + defesa pessoal (exclusivo mulheres): R$130,00/mês
+- Jiu Jitsu Kids: R$120,00/mês
+- Muay Thai: R$120,00/mês
+- FitDance: R$89,90/mês
+
+HORÁRIOS (Musculação):
+- Segunda a sexta: 05h00 às 23h00 (sem fechar para almoço)
+- Sábado: 08h00 às 14h00
+- Horários das aulas de Jiu Jitsu, Muay Thai e FitDance: disponíveis na academia
+
+PROMOÇÕES: No momento não há promoções ativas.
+
+HORÁRIOS DAS AULAS COLETIVAS:
+- Jiu Jitsu adulto (turma mista): Segundas e quartas às 21h00 / Segundas, quartas e sextas às 08h30
+- Jiu Jitsu Kids (4 a 7 anos): Segundas e quartas às 18h00
+- Jiu Jitsu Kids (8 a 11 anos): Segundas e quartas às 19h00
+- Jiu Jitsu + Defesa Pessoal Feminino (12 a 15 anos): Segundas e quartas às 20h00
+- Muay Thai: Terças e quintas às 20h00
+- FitDance: Terças e quintas às 18h10
+
+CONTATO PARA FECHAMENTO:
+- WhatsApp: (47) 99640-0037
+- Visita presencial na academia
+
+INSTRUÇÕES DE COMPORTAMENTO:
+1. Seja simpático, direto e motivador. Use emojis com moderação (1-2 por mensagem).
+2. Quando apresentar planos, destaque o custo-benefício (ex: anual sai mais barato).
+3. Se o cliente demonstrar interesse, pergunte o nome e incentive a entrar em contato pelo WhatsApp ou visitar.
+4. Nunca invente informações. Se não souber algo, oriente a entrar em contato pelo WhatsApp.
+5. Responda SEMPRE em português do Brasil.
+6. Quando o cliente quiser fechar ou agendar, forneça o link do WhatsApp: https://wa.me/5547996400037
+7. Mantenha respostas concisas (máximo 4 parágrafos). Use quebras de linha para facilitar leitura.
+8. NÃO use markdown com asteriscos ou hashtags. Escreva em texto simples.`;
+
+const messagesEl = document.getElementById('messages');
+const quickRepliesEl = document.getElementById('quickReplies');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let history = [];
+let isTyping = false;
+
+function getTime() {
+  return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function addBubble(role, text, showTime = true) {
+  const wrap = document.createElement('div');
+  wrap.className = `bubble-wrap ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+  if (showTime) {
+    const t = document.createElement('div');
+    t.className = 'bubble-time';
+    t.textContent = getTime();
+    wrap.appendChild(t);
+  }
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bubble;
+}
+
+function showTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap bot typing';
+  wrap.id = 'typing-indicator';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  wrap.appendChild(bubble);
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function setQuickReplies(replies) {
+  quickRepliesEl.innerHTML = '';
+  replies.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'qr-btn';
+    btn.textContent = r;
+    btn.onclick = () => { sendMessage(r); };
+    quickRepliesEl.appendChild(btn);
+  });
+}
+
+function detectQuickReplies(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes('musculação') || lower.includes('plano')) {
+    return ['Ver planos anuais 💪', 'Como funciona?', 'Quero me matricular'];
+  }
+  if (lower.includes('jiu jitsu') || lower.includes('muay thai') || lower.includes('fitdance')) {
+    return ['Quais os horários?', 'Quero me inscrever', 'Outros planos'];
+  }
+  if (lower.includes('whatsapp') || lower.includes('wa.me') || lower.includes('visita')) {
+    return ['Quero saber mais', 'Ver todos os planos'];
+  }
+  return ['Ver planos 💰', 'Horários ⏰', 'Quero me matricular 🚀'];
+}
+
+async function sendMessage(text) {
+  if (isTyping || !text.trim()) return;
+
+  clearQuickReplies();
+  addBubble('user', text.trim());
+  history.push({ role: 'user', content: text.trim() });
+  userInput.value = '';
+  userInput.style.height = 'auto';
+  isTyping = true;
+  sendBtn.disabled = true;
+  showTyping();
+
+  try {
+    const contents = history.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAnahS5Ssl6L0wJa4ZE3nUYnyOygSOo7fM', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: contents,
+        generationConfig: { maxOutputTokens: 1000 }
+      })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, tive um problema. Tente novamente!';
+    history.push({ role: 'assistant', content: reply });
+
+    // Check if reply has WhatsApp link → render as HTML
+    if (reply.includes('wa.me')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble-wrap bot';
+      wrap.style.animation = 'fadeUp .25s ease both';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+
+      // Split text around the link
+      const parts = reply.split(/(https:\/\/wa\.me\/\S+)/);
+      parts.forEach(part => {
+        if (part.startsWith('https://wa.me/')) {
+          const a = document.createElement('a');
+          a.href = part;
+          a.target = '_blank';
+          a.className = 'wpp-cta';
+          a.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Falar no WhatsApp`;
+          bubble.appendChild(a);
+        } else if (part.trim()) {
+          const span = document.createElement('span');
+          span.textContent = part;
+          bubble.appendChild(span);
+        }
+      });
+
+      const t = document.createElement('div');
+      t.className = 'bubble-time';
+      t.textContent = getTime();
+      wrap.appendChild(bubble);
+      wrap.appendChild(t);
+      messagesEl.appendChild(wrap);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    } else {
+      addBubble('bot', reply);
+    }
+
+    setQuickReplies(detectQuickReplies(reply));
+
+  } catch (err) {
+    removeTyping();
+    addBubble('bot', 'Ops! Tive um problema de conexão. Tente novamente em instantes. 🙏');
+  }
+
+  isTyping = false;
+  sendBtn.disabled = false;
+}
+
+function clearQuickReplies() {
+  quickRepliesEl.innerHTML = '';
+}
+
+// Auto-resize textarea
+userInput.addEventListener('input', () => {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+});
+
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(userInput.value);
+  }
+});
+
+sendBtn.addEventListener('click', () => sendMessage(userInput.value));
+
+// Welcome message
+async function welcome() {
+  showTyping();
+  await new Promise(r => setTimeout(r, 900));
+  removeTyping();
+  const msg = `Olá! Bem-vindo à Body Evolution! 💪
+
+Sou o Thor, seu assistente virtual. Estou aqui para ajudar você a conhecer nossos planos e modalidades.
+
+O que você gostaria de saber?`;
+  history.push({ role: 'assistant', content: msg });
+  addBubble('bot', msg);
+  setQuickReplies(['Ver planos de musculação 💪', 'Modalidades disponíveis 🥊', 'Horários de funcionamento ⏰']);
+}
+
+welcome();
+</script>
+</body>
+</html>
